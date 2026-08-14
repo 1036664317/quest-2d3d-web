@@ -33,40 +33,27 @@
 
     <!-- 2. 视频与 WebGL 视差处理画布容器 -->
     <main id="player-viewport">
-      <!-- 原始 2D 视频输入源 (隐式播放) -->
-      <video id="source-video" playsinline crossorigin="anonymous"></video>
+      <!-- HTML5 原生 3D 视频主元素 (具备原生 controls，加载真实视频流) -->
+      <video id="converted-3d-video" controls playsinline crossorigin="anonymous" data-stereo-mode="sbs" data-projection="3d_sbs"></video>
 
-      <!-- WebGL 2D转3D 视差深度处理器 (隐式渲染) -->
+      <!-- WebGL 2D转3D 视差深度图层 (悬浮覆盖在视频上方，pointer-events: none) -->
       <canvas id="gl-canvas" width="1920" height="1080" data-stereo-mode="sbs" data-projection="3d_sbs"></canvas>
-
-      <!-- 实时捕获输出的 3D 立体 HTML5 视频元素 (固定铺满视口，视频绝对不动) -->
-      <video id="converted-3d-video" playsinline crossorigin="anonymous" data-stereo-mode="sbs" data-projection="3d_sbs"></video>
 
       <!-- 初始引导遮罩 -->
       <div id="start-guide-mask">
         <div class="play-pulse-circle" onclick="handleStartPlayback()">▶</div>
         <h2>输入视频链接并点击“播放”</h2>
-        <p>点击“播放”立即输出 3D 视差视频流，使用底部可自由拖动的 3D 专属控制条！</p>
+        <p>点击“播放”直接输出 3D 视差视频流，完全支持浏览器原生进度条与 3D VR 全屏！</p>
       </div>
 
-      <!-- 专属 3D 视频控制条 (固定置底，可平滑拖动进度条，视频绝对静止) -->
-      <div id="custom-control-bar" class="custom-player-bar">
-        <button id="btn-toggle-play" class="control-btn" onclick="togglePlayPause()">▶</button>
-        <span id="time-display" class="time-text">00:00 / 00:00</span>
-
-        <!-- 可自由平滑拖动的 Seek 进度条 -->
-        <div class="seek-container">
-          <input type="range" id="seek-bar" min="0" max="100" value="0" step="0.1" oninput="onSeekInput(this.value)" onchange="onSeekChange(this.value)">
-          <div id="seek-progress-fill" class="seek-fill"></div>
-        </div>
-
+      <!-- 悬浮调节控制条 (仅保留 3D 视差调节) -->
+      <div id="floating-controls" class="floating-overlay">
         <div class="parallax-control">
-          <label for="parallax-range">3D 视差:</label>
+          <label for="parallax-range">3D 视差深度:</label>
           <input type="range" id="parallax-range" min="5" max="90" value="35" oninput="onParallaxSliderChange(this.value)">
           <span id="parallax-val">35</span>
         </div>
-
-        <button class="control-btn icon-btn" onclick="toggleFullscreen()" title="全屏">📺</button>
+        <button class="action-btn boost" onclick="boost3DDepth()">✨ 视差增强</button>
       </div>
     </main>
 

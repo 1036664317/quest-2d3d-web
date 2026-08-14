@@ -1,13 +1,9 @@
-// Quest 2D-to-3D WebXR MediaStream Core Engine
+// Quest 2D-to-3D WebXR Core Engine
 const videoInput = document.getElementById('video-input');
-const sourceVideo = document.getElementById('source-video');
 const convertedVideo = document.getElementById('converted-3d-video');
 const canvas = document.getElementById('gl-canvas');
 const guideMask = document.getElementById('start-guide-mask');
 const toast = document.getElementById('toast');
-const btnTogglePlay = document.getElementById('btn-toggle-play');
-const timeDisplay = document.getElementById('time-display');
-const seekBar = document.getElementById('seek-bar');
 
 let hlsPlayer = null;
 let gl = null;
@@ -16,103 +12,15 @@ let uEyeOffsetLoc = null;
 let uParallaxIntensityLoc = null;
 let texture = null;
 let parallaxIntensity = 0.035;
-let isStreamCaptured = false;
-let isUserSeeking = false;
 
 // 页面初始化
 window.addEventListener('DOMContentLoaded', () => {
   videoInput.value = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
-  setupCustomControlBarSync();
 });
 
 function loadPreset(url) {
   videoInput.value = url;
   handleStartPlayback();
-}
-
-// 绑定专属控制条与源视频的双向同步 (进度条、时间文字、播放状态)
-function setupCustomControlBarSync() {
-  sourceVideo.addEventListener('timeupdate', () => {
-    if (!isUserSeeking && sourceVideo.duration) {
-      const current = sourceVideo.currentTime || 0;
-      const duration = sourceVideo.duration || 0;
-      seekBar.value = (current / duration) * 100;
-      updateTimeDisplay(current, duration);
-    }
-  });
-
-  sourceVideo.addEventListener('loadedmetadata', () => {
-    updateTimeDisplay(sourceVideo.currentTime || 0, sourceVideo.duration || 0);
-  });
-
-  sourceVideo.addEventListener('durationchange', () => {
-    updateTimeDisplay(sourceVideo.currentTime || 0, sourceVideo.duration || 0);
-  });
-
-  sourceVideo.addEventListener('play', () => {
-    if (btnTogglePlay) btnTogglePlay.innerText = '❚❚';
-  });
-
-  sourceVideo.addEventListener('pause', () => {
-    if (btnTogglePlay) btnTogglePlay.innerText = '▶';
-  });
-
-  sourceVideo.addEventListener('ended', () => {
-    if (btnTogglePlay) btnTogglePlay.innerText = '▶';
-  });
-}
-
-function updateTimeDisplay(current, duration) {
-  if (!timeDisplay) return;
-  const fmtCurrent = formatTime(current);
-  const fmtDuration = formatTime(duration);
-  timeDisplay.innerText = `${fmtCurrent} / ${fmtDuration}`;
-}
-
-function formatTime(seconds) {
-  if (isNaN(seconds) || seconds < 0) return '00:00';
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  const mm = m < 10 ? '0' + m : m;
-  const ss = s < 10 ? '0' + s : s;
-  return `${mm}:${ss}`;
-}
-
-// 拖拽进度条 Seek 交互处理
-function onSeekInput(val) {
-  isUserSeeking = true;
-  if (sourceVideo.duration) {
-    const targetTime = (val / 100) * sourceVideo.duration;
-    sourceVideo.currentTime = targetTime;
-    updateTimeDisplay(targetTime, sourceVideo.duration);
-  }
-}
-
-function onSeekChange(val) {
-  if (sourceVideo.duration) {
-    const targetTime = (val / 100) * sourceVideo.duration;
-    sourceVideo.currentTime = targetTime;
-  }
-  isUserSeeking = false;
-}
-
-// 播放 / 暂停 切换
-function togglePlayPause() {
-  if (!sourceVideo.src && !hlsPlayer) {
-    handleStartPlayback();
-    return;
-  }
-
-  if (sourceVideo.paused) {
-    sourceVideo.play().then(() => {
-      if (btnTogglePlay) btnTogglePlay.innerText = '❚❚';
-    }).catch((e) => {
-      console.warn('Play blocked:', e);
-    });
-  } else {
-    sourceVideo.pause();
-    if (btnTogglePlay) btnTogglePlay.innerText = '▶';
-  }
 }
 
 function handleStartPlayback() {
@@ -125,11 +33,12 @@ function handleStartPlayback() {
   guideMask.style.display = 'none';
   showToast('🚀 正在生成 3D 视差立体流...');
 
+  // 使用本地代理接口绕过 CORS 和防盗链限制
   const proxiedUrl = `/api/proxy?url=${encodeURIComponent(rawUrl)}`;
-  loadVideoToSource(proxiedUrl, rawUrl);
+  loadVideoToNativePlayer(proxiedUrl, rawUrl);
 }
 
-function loadVideoToSource(streamUrl, rawUrl) {
+function loadVideoToNativePlayer(streamUrl, rawUrl) {
   if (hlsPlayer) {
     hlsPlayer.destroy();
     hlsPlayer = null;
@@ -144,9 +53,9 @@ function loadVideoToSource(streamUrl, rawUrl) {
       }
     });
     hlsPlayer.loadSource(streamUrl);
-    hlsPlayer.attachMedia(sourceVideo);
+    hlsPlayer.attachMedia(convertedVideo);
     hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-      startPlaybackAndGL();
+      startPlayback();
     });
     hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
       if (data.fatal) {
@@ -154,26 +63,27 @@ function loadVideoToSource(streamUrl, rawUrl) {
         hlsPlayer.destroy();
         hlsPlayer = new Hls();
         hlsPlayer.loadSource(rawUrl);
-        hlsPlayer.attachMedia(sourceVideo);
-        startPlaybackAndGL();
+        hlsPlayer.attachMedia(convertedVideo);
+        startPlayback();
       }
     });
   } else {
-    sourceVideo.src = streamUrl;
-    startPlaybackAndGL();
+    convertedVideo.src = streamUrl;
+    startPlayback();
   }
 }
 
-function startPlaybackAndGL() {
-  sourceVideo.play().then(() => {
+function startPlayback() {
+  convertedVideo.play().then(() => {
     initGlEngine();
-    if (btnTogglePlay) btnTogglePlay.innerText = '❚❚';
+    showToast('✨ 3D 视差视频流已挂载，原生进度条已可直接拖动！');
   }).catch((err) => {
-    console.log('Muted fallback play:', err);
-    sourceVideo.muted = true;
-    sourceVideo.play();
-    initGlEngine();
-    if (btnTogglePlay) btnTogglePlay.innerText = '❚❚';
+    console.log('Autoplay muted fallback:', err);
+    convertedVideo.muted = true;
+    convertedVideo.play().then(() => {
+      initGlEngine();
+      showToast('✨ 3D 视差视频流已挂载 (已静音)');
+    });
   });
 }
 
@@ -269,16 +179,16 @@ function initGlEngine() {
 }
 
 function render3DSBSCanvas() {
-  if (sourceVideo.readyState >= sourceVideo.HAVE_CURRENT_DATA) {
+  if (convertedVideo.readyState >= convertedVideo.HAVE_CURRENT_DATA) {
     try {
       gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourceVideo);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, convertedVideo);
     } catch (e) {}
 
-    if (sourceVideo.videoWidth && sourceVideo.videoHeight) {
-      if (canvas.width !== sourceVideo.videoWidth * 2) {
-        canvas.width = sourceVideo.videoWidth * 2;
-        canvas.height = sourceVideo.videoHeight;
+    if (convertedVideo.videoWidth && convertedVideo.videoHeight) {
+      if (canvas.width !== convertedVideo.videoWidth * 2) {
+        canvas.width = convertedVideo.videoWidth * 2;
+        canvas.height = convertedVideo.videoHeight;
       }
     }
 
@@ -299,32 +209,6 @@ function render3DSBSCanvas() {
     gl.uniform1f(uEyeOffsetLoc, 1.0);
     gl.uniform1f(uParallaxIntensityLoc, parallaxIntensity);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-    if (!isStreamCaptured) {
-      setupMediaStreamToVideo();
-    }
-  }
-}
-
-// 捕获 WebGL 3D 画布流，推送到 3D 视频容器
-function setupMediaStreamToVideo() {
-  try {
-    const stream = canvas.captureStream ? canvas.captureStream(60) : (canvas.mozCaptureStream ? canvas.mozCaptureStream(60) : null);
-    if (stream) {
-      const audioTracks = sourceVideo.captureStream ? sourceVideo.captureStream().getAudioTracks() : (sourceVideo.mozCaptureStream ? sourceVideo.mozCaptureStream().getAudioTracks() : []);
-      if (audioTracks.length > 0) {
-        stream.addTrack(audioTracks[0]);
-      }
-      convertedVideo.srcObject = stream;
-      convertedVideo.play().then(() => {
-        isStreamCaptured = true;
-      }).catch((e) => {
-        console.log('convertedVideo play catch:', e);
-        isStreamCaptured = true;
-      });
-    }
-  } catch (e) {
-    console.error('Canvas captureStream error:', e);
   }
 }
 
@@ -338,13 +222,6 @@ function boost3DDepth() {
   document.getElementById('parallax-range').value = 65;
   document.getElementById('parallax-val').innerText = '65';
   showToast('✨ 3D 视差强度已增强到极致');
-}
-
-function toggleFullscreen() {
-  const container = document.getElementById('player-viewport') || convertedVideo;
-  if (container.requestFullscreen) container.requestFullscreen();
-  else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
-  else if (container.msRequestFullscreen) container.msRequestFullscreen();
 }
 
 function showToast(msg) {
