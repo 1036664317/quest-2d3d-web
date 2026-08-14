@@ -1,7 +1,6 @@
-// Quest 2D-to-3D WebXR MediaStream Core Engine
+// Quest 2D-to-3D WebXR Engine
 const videoInput = document.getElementById('video-input');
 const sourceVideo = document.getElementById('source-video');
-const convertedVideo = document.getElementById('converted-3d-video');
 const canvas = document.getElementById('gl-canvas');
 const guideMask = document.getElementById('start-guide-mask');
 const toast = document.getElementById('toast');
@@ -13,89 +12,15 @@ let uEyeOffsetLoc = null;
 let uParallaxIntensityLoc = null;
 let texture = null;
 let parallaxIntensity = 0.035;
-let isStreamCaptured = false;
-let mediaStream = null;
 
 // 页面初始化
 window.addEventListener('DOMContentLoaded', () => {
   videoInput.value = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
-  setupNativeControlsSync();
 });
 
 function loadPreset(url) {
   videoInput.value = url;
   handleStartPlayback();
-}
-
-// 绑定原生 <video> 播放控件与 2D 源视频的精确双向同步 (解决 MediaStream 无法拖拽进度条的问题)
-function setupNativeControlsSync() {
-  // 重写 convertedVideo 的关键媒体属性，使其从 MediaStream 的 Infinity 转为返回源视频的实际时长与进度
-  try {
-    Object.defineProperty(convertedVideo, 'duration', {
-      get: () => {
-        const d = sourceVideo.duration;
-        return (d && !isNaN(d) && isFinite(d)) ? d : 0;
-      },
-      configurable: true
-    });
-
-    Object.defineProperty(convertedVideo, 'currentTime', {
-      get: () => sourceVideo.currentTime || 0,
-      set: (val) => {
-        sourceVideo.currentTime = val;
-      },
-      configurable: true
-    });
-
-    Object.defineProperty(convertedVideo, 'paused', {
-      get: () => sourceVideo.paused,
-      configurable: true
-    });
-
-    Object.defineProperty(convertedVideo, 'ended', {
-      get: () => sourceVideo.ended,
-      configurable: true
-    });
-
-    Object.defineProperty(convertedVideo, 'seeking', {
-      get: () => sourceVideo.seeking,
-      configurable: true
-    });
-  } catch (e) {
-    console.warn('Property override fallback:', e);
-  }
-
-  // 将 sourceVideo 的媒体事件（loadedmetadata, durationchange, timeupdate 等）实时转发给 convertedVideo
-  // 这会直接刷新浏览器原生播放控件的进度条与时间刻度
-  const eventsToForward = [
-    'loadedmetadata',
-    'durationchange',
-    'timeupdate',
-    'play',
-    'playing',
-    'pause',
-    'seeking',
-    'seeked',
-    'waiting',
-    'ended'
-  ];
-
-  eventsToForward.forEach((eventName) => {
-    sourceVideo.addEventListener(eventName, () => {
-      try {
-        convertedVideo.dispatchEvent(new Event(eventName));
-      } catch (e) {}
-    });
-  });
-
-  // 用户点击原生控制条 Play/Pause 时同步源视频
-  convertedVideo.addEventListener('play', () => {
-    if (sourceVideo.paused) sourceVideo.play().catch(() => {});
-  });
-
-  convertedVideo.addEventListener('pause', () => {
-    if (!sourceVideo.paused) sourceVideo.pause();
-  });
 }
 
 function handleStartPlayback() {
@@ -108,7 +33,6 @@ function handleStartPlayback() {
   guideMask.style.display = 'none';
   showToast('🚀 正在生成 3D 视差立体流...');
 
-  // 使用本地代理接口
   const proxiedUrl = `/api/proxy?url=${encodeURIComponent(rawUrl)}`;
   loadVideoToSource(proxiedUrl, rawUrl);
 }
@@ -149,9 +73,9 @@ function loadVideoToSource(streamUrl, rawUrl) {
 }
 
 function startPlaybackAndGL() {
-  // 手势回调内同时触发 sourceVideo 与 convertedVideo 的播放
   sourceVideo.play().then(() => {
     initGlEngine();
+    showToast('✨ 3D 视差视频流就绪，原生进度条已可拖拽！');
   }).catch((err) => {
     console.log('Muted fallback play:', err);
     sourceVideo.muted = true;
@@ -163,7 +87,7 @@ function startPlaybackAndGL() {
 // WebGL 2D转3D 深度视差渲染引擎
 function initGlEngine() {
   if (gl) return;
-  gl = canvas.getContext('webgl', { xrCompatible: true, preserveDrawingBuffer: true }) ||
+  gl = canvas.getContext('webgl', { alpha: true, preserveDrawingBuffer: true }) ||
        canvas.getContext('experimental-webgl');
   if (!gl) return;
 
@@ -282,34 +206,6 @@ function render3DSBSCanvas() {
     gl.uniform1f(uEyeOffsetLoc, 1.0);
     gl.uniform1f(uParallaxIntensityLoc, parallaxIntensity);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-    if (!isStreamCaptured) {
-      setupMediaStreamToVideo();
-    }
-  }
-}
-
-// 捕获 WebGL 3D 画布流，直接推送到具有浏览器原生控件的 <video id="converted-3d-video">
-function setupMediaStreamToVideo() {
-  try {
-    mediaStream = canvas.captureStream ? canvas.captureStream(60) : (canvas.mozCaptureStream ? canvas.mozCaptureStream(60) : null);
-    if (mediaStream) {
-      // 提取源视频音轨合并入 3D 视频流
-      const audioTracks = sourceVideo.captureStream ? sourceVideo.captureStream().getAudioTracks() : (sourceVideo.mozCaptureStream ? sourceVideo.mozCaptureStream().getAudioTracks() : []);
-      if (audioTracks.length > 0) {
-        mediaStream.addTrack(audioTracks[0]);
-      }
-      convertedVideo.srcObject = mediaStream;
-      convertedVideo.play().then(() => {
-        isStreamCaptured = true;
-        showToast('✨ 3D 视差视频流已挂载，支持原生可拖拽进度条！');
-      }).catch((e) => {
-        console.log('convertedVideo play catch:', e);
-        isStreamCaptured = true;
-      });
-    }
-  } catch (e) {
-    console.error('Canvas captureStream error:', e);
   }
 }
 

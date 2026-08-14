@@ -33,14 +33,11 @@
 
     <!-- 2. 视频与 WebGL 视差处理画布容器 -->
     <main id="player-viewport">
-      <!-- 原始 2D 视频输入源 (隐式播放) -->
-      <video id="source-video" playsinline crossorigin="anonymous"></video>
+      <!-- 真正的原生 HTML5 视频控件主元素 -->
+      <video id="source-video" controls playsinline crossorigin="anonymous" data-stereo-mode="sbs" data-projection="3d_sbs"></video>
 
-      <!-- WebGL 2D转3D 视差深度处理器 (主画面渲染) -->
-      <canvas id="gl-canvas" width="1920" height="1080" data-stereo-mode="sbs" data-projection="3d_sbs"></canvas>
-
-      <!-- 实时捕获输出的 3D 立体 HTML5 视频元素 (支持 Quest 浏览器原生识别与全屏影院) -->
-      <video id="converted-3d-video" controls playsinline crossorigin="anonymous" data-stereo-mode="sbs" data-projection="3d_sbs"></video>
+      <!-- WebGL 2D转3D 视差深度处理器 (绝对定位叠加在画面上，pointer-events: none) -->
+      <canvas id="gl-canvas" width="1920" height="1080"></canvas>
 
       <!-- 初始引导遮罩 -->
       <div id="start-guide-mask">
