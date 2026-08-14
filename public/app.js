@@ -181,8 +181,8 @@ function initGlEngine() {
 function render3DSBSCanvas() {
   if (convertedVideo.readyState >= convertedVideo.HAVE_CURRENT_DATA) {
     if (convertedVideo.videoWidth && convertedVideo.videoHeight) {
-      if (canvas.width !== convertedVideo.videoWidth) {
-        canvas.width = convertedVideo.videoWidth;
+      if (canvas.width !== convertedVideo.videoWidth * 2) {
+        canvas.width = convertedVideo.videoWidth * 2;
         canvas.height = convertedVideo.videoHeight;
       }
     }
