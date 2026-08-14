@@ -185,27 +185,26 @@ function render3DSBSCanvas() {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, convertedVideo);
     } catch (e) {}
 
-    if (convertedVideo.videoWidth && convertedVideo.videoHeight) {
-      if (canvas.width !== convertedVideo.videoWidth * 2) {
-        canvas.width = convertedVideo.videoWidth * 2;
-        canvas.height = convertedVideo.videoHeight;
-      }
+    const vWidth = convertedVideo.videoWidth || 1920;
+    const vHeight = convertedVideo.videoHeight || 1080;
+
+    if (canvas.width !== vWidth || canvas.height !== vHeight) {
+      canvas.width = vWidth;
+      canvas.height = vHeight;
     }
 
-    const w = canvas.width;
-    const h = canvas.height;
-    const halfW = w / 2;
+    const halfW = Math.floor(vWidth / 2);
 
     gl.useProgram(program);
 
     // 左眼视口 (Left Eye)
-    gl.viewport(0, 0, halfW, h);
+    gl.viewport(0, 0, halfW, vHeight);
     gl.uniform1f(uEyeOffsetLoc, -1.0);
     gl.uniform1f(uParallaxIntensityLoc, parallaxIntensity);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     // 右眼视口 (Right Eye)
-    gl.viewport(halfW, 0, halfW, h);
+    gl.viewport(halfW, 0, halfW, vHeight);
     gl.uniform1f(uEyeOffsetLoc, 1.0);
     gl.uniform1f(uParallaxIntensityLoc, parallaxIntensity);
     gl.drawArrays(gl.TRIANGLES, 0, 6);

@@ -188,6 +188,7 @@ body, html {
   height: 100%;
   object-fit: contain;
   pointer-events: none;
+  background: #000;
   z-index: 5;
 }
 
