@@ -94,10 +94,23 @@ app.get('/api/proxy', (req, res) => {
   fetchUrl(targetUrlStr, 0);
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`=======================================================`);
-  console.log(` Meta Quest 2D-to-3D Web Server Started Successfully!  `);
-  console.log(` Access URL: http://localhost:${PORT}                  `);
-  console.log(` Open this URL in Meta Quest Browser for 3D VR Mode!    `);
-  console.log(`=======================================================`);
-});
+function startServer(portToTry) {
+  const server = app.listen(portToTry, '0.0.0.0', () => {
+    console.log(`=======================================================`);
+    console.log(` Meta Quest 2D-to-3D Web Server Started Successfully!  `);
+    console.log(` Access URL: http://localhost:${portToTry}             `);
+    console.log(` Open this URL in Meta Quest Browser for 3D VR Mode!    `);
+    console.log(`=======================================================`);
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`⚠️ 端口 ${portToTry} 已被占用，正在尝试端口 ${portToTry + 1}...`);
+      startServer(portToTry + 1);
+    } else {
+      console.error('Server error:', err);
+    }
+  });
+}
+
+startServer(PORT);
