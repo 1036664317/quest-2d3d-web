@@ -32,34 +32,31 @@
     </header>
 
     <!-- 2. 视频与 WebGL 视差处理画布容器 -->
-    <main id="player-viewport" data-stereo-mode="sbs" data-projection="3d_sbs">
+    <main id="player-viewport">
       <!-- 2D 视频解码源 (隐式解码) -->
       <video id="source-video" playsinline crossorigin="anonymous"></video>
 
-      <!-- WebGL 2D转3D 视差深度处理器 (主视口与 3D 全屏画面) -->
-      <canvas id="gl-canvas" width="1920" height="1080" data-stereo-mode="sbs" data-projection="3d_sbs"></canvas>
+      <!-- WebGL 2D转3D 视差深度处理器 (隐式渲染) -->
+      <canvas id="gl-canvas" width="1920" height="1080"></canvas>
+
+      <!-- 真正的 3D SBS HTML5 原生 <video controls> 视频元素 (呈现全套原生进度条与原生全屏) -->
+      <video id="converted-3d-video" controls playsinline crossorigin="anonymous" data-stereo-mode="sbs" data-projection="3d_sbs"></video>
 
       <!-- 初始引导遮罩 -->
       <div id="start-guide-mask">
         <div class="play-pulse-circle" onclick="handleStartPlayback()">▶</div>
         <h2>输入视频链接并点击“播放”</h2>
-        <p>点击“播放”直接输出 3D 视差视频流，全屏呈现 Quest 3D SBS 立体影院！</p>
+        <p>点击“播放”直接输出 3D 视差视频流，全屏支持浏览器原生进度条与原生 3D VR 全屏！</p>
       </div>
 
-      <!-- 3D 播放控制条 (包含可拖拽进度条、时间、音量、3D视差滑块与 3D 全屏按钮) -->
+      <!-- 悬浮调节控制条 (仅保留 3D 视差微调) -->
       <div id="floating-controls" class="floating-overlay">
-        <button id="btn-play-pause" class="ctrl-btn" onclick="togglePlayPause()">▶</button>
-        <span id="time-display" class="time-text">00:00 / 00:00</span>
-        <input type="range" id="seek-bar" class="seek-slider" min="0" max="100" value="0" step="0.1">
-
         <div class="parallax-control">
-          <label for="parallax-range">3D 视差:</label>
+          <label for="parallax-range">3D 视差深度:</label>
           <input type="range" id="parallax-range" min="5" max="90" value="35" oninput="onParallaxSliderChange(this.value)">
           <span id="parallax-val">35</span>
         </div>
-
-        <button class="ctrl-btn" onclick="toggleMute()" id="btn-mute">🔊</button>
-        <button class="ctrl-btn" onclick="toggleViewportFullscreen()" title="3D 原生全屏">⛶</button>
+        <button class="action-btn boost" onclick="boost3DDepth()">✨ 视差增强</button>
       </div>
     </main>
 
