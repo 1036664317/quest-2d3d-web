@@ -241,6 +241,41 @@ body, html {
   line-height: 1.6;
 }
 
+/* 外层独立 Seek 进度条 (悬浮浮于底部，完全不干扰 3D 视频流与原生全屏) */
+.bottom-progress-overlay {
+  position: absolute;
+  bottom: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 64px);
+  max-width: 900px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  background: rgba(15, 17, 26, 0.85);
+  padding: 8px 20px;
+  border-radius: 20px;
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--bg-card-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+  z-index: 45;
+}
+
+.time-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-family: monospace;
+}
+
+.seek-slider {
+  flex: 1;
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+  height: 6px;
+  border-radius: 3px;
+}
+
 /* 悬浮 3D 视差微调面板 (置于右上角，不遮挡原生播放条) */
 .floating-overlay {
   position: absolute;

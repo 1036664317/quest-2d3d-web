@@ -19,7 +19,55 @@ let isStreamCaptured = false;
 window.addEventListener('DOMContentLoaded', () => {
   videoInput.value = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
   setupNativeControlsSync();
+  initSeekBarSync();
 });
+
+// 外层独立 Seek 进度条与 sourceVideo 的精确时间同步
+function initSeekBarSync() {
+  const timeDisplay = document.getElementById('time-display');
+  const seekBar = document.getElementById('seek-bar');
+  if (!timeDisplay || !seekBar) return;
+  let isSeeking = false;
+
+  sourceVideo.addEventListener('timeupdate', () => {
+    if (!isSeeking && sourceVideo.duration) {
+      const pct = (sourceVideo.currentTime / sourceVideo.duration) * 100;
+      seekBar.value = pct;
+      updateTimeText();
+    }
+  });
+
+  sourceVideo.addEventListener('loadedmetadata', updateTimeText);
+  sourceVideo.addEventListener('durationchange', updateTimeText);
+
+  function updateTimeText() {
+    const cur = sourceVideo.currentTime || 0;
+    const dur = sourceVideo.duration || 0;
+    timeDisplay.innerText = `${formatTime(cur)} / ${formatTime(dur)}`;
+  }
+
+  seekBar.addEventListener('input', () => {
+    isSeeking = true;
+    if (sourceVideo.duration) {
+      const cur = (seekBar.value / 100) * sourceVideo.duration;
+      timeDisplay.innerText = `${formatTime(cur)} / ${formatTime(sourceVideo.duration)}`;
+    }
+  });
+
+  seekBar.addEventListener('change', () => {
+    if (sourceVideo.duration) {
+      sourceVideo.currentTime = (seekBar.value / 100) * sourceVideo.duration;
+    }
+    isSeeking = false;
+  });
+}
+
+function formatTime(sec) {
+  if (isNaN(sec) || !isFinite(sec)) return '00:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
 
 // 核心：为 convertedVideo 代理 duration 与 currentTime，解锁原生进度条拖拽与时间刻度
 function setupNativeControlsSync() {
