@@ -167,31 +167,16 @@ body, html {
 }
 
 #source-video {
-  display: block;
+  display: none;
+}
+
+#gl-canvas {
   width: 100%;
   height: 100%;
   object-fit: contain;
   background: #000;
-}
-
-#gl-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  pointer-events: none;
-  z-index: 5;
-}
-
-.action-btn.webxr-btn {
-  background: linear-gradient(135deg, #7928ca, #00d2ff);
-  box-shadow: 0 0 12px rgba(121, 40, 202, 0.5);
-}
-
-.action-btn.webxr-btn:hover {
-  box-shadow: 0 0 20px rgba(0, 210, 255, 0.8);
+  display: block;
+  z-index: 10;
 }
 
 /* 引导遮罩 */
@@ -250,21 +235,54 @@ body, html {
   line-height: 1.6;
 }
 
-/* 浮动控制条 */
+/* 浮动控制条 (包含可拖拽进度条、时间、音量、3D 视差与 3D 全屏) */
 .floating-overlay {
   position: absolute;
-  top: 16px;
-  right: 20px;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 48px);
+  max-width: 960px;
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
-  background: var(--bg-card);
-  padding: 8px 20px;
-  border-radius: 32px;
+  background: rgba(15, 17, 26, 0.88);
+  padding: 10px 22px;
+  border-radius: 24px;
   backdrop-filter: blur(16px);
   border: 1px solid var(--bg-card-border);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
   z-index: 40;
+}
+
+.ctrl-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+
+.ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.time-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-family: monospace;
+}
+
+.seek-slider {
+  flex: 1;
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
+  height: 6px;
+  border-radius: 3px;
 }
 
 .action-btn {

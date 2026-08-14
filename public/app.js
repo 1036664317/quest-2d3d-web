@@ -5,6 +5,11 @@ const canvas = document.getElementById('gl-canvas');
 const guideMask = document.getElementById('start-guide-mask');
 const toast = document.getElementById('toast');
 
+const btnPlayPause = document.getElementById('btn-play-pause');
+const timeDisplay = document.getElementById('time-display');
+const seekBar = document.getElementById('seek-bar');
+const btnMute = document.getElementById('btn-mute');
+
 let hlsPlayer = null;
 let gl = null;
 let program = null;
@@ -12,11 +17,87 @@ let uEyeOffsetLoc = null;
 let uParallaxIntensityLoc = null;
 let texture = null;
 let parallaxIntensity = 0.035;
+let isSeekingUser = false;
 
 // 页面初始化
 window.addEventListener('DOMContentLoaded', () => {
   videoInput.value = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+  initPlayerSync();
 });
+
+function initPlayerSync() {
+  sourceVideo.addEventListener('timeupdate', () => {
+    if (!isSeekingUser && sourceVideo.duration) {
+      const pct = (sourceVideo.currentTime / sourceVideo.duration) * 100;
+      seekBar.value = pct;
+      updateTimeDisplay();
+    }
+  });
+
+  sourceVideo.addEventListener('loadedmetadata', updateTimeDisplay);
+  sourceVideo.addEventListener('durationchange', updateTimeDisplay);
+
+  sourceVideo.addEventListener('play', () => {
+    btnPlayPause.innerText = '⏸';
+  });
+
+  sourceVideo.addEventListener('pause', () => {
+    btnPlayPause.innerText = '▶';
+  });
+
+  seekBar.addEventListener('input', () => {
+    isSeekingUser = true;
+    if (sourceVideo.duration) {
+      const cur = (seekBar.value / 100) * sourceVideo.duration;
+      timeDisplay.innerText = `${formatTime(cur)} / ${formatTime(sourceVideo.duration)}`;
+    }
+  });
+
+  seekBar.addEventListener('change', () => {
+    if (sourceVideo.duration) {
+      sourceVideo.currentTime = (seekBar.value / 100) * sourceVideo.duration;
+    }
+    isSeekingUser = false;
+  });
+}
+
+function updateTimeDisplay() {
+  const cur = sourceVideo.currentTime || 0;
+  const dur = sourceVideo.duration || 0;
+  timeDisplay.innerText = `${formatTime(cur)} / ${formatTime(dur)}`;
+}
+
+function formatTime(sec) {
+  if (isNaN(sec) || !isFinite(sec)) return '00:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function togglePlayPause() {
+  if (sourceVideo.paused) {
+    sourceVideo.play().catch(() => {});
+  } else {
+    sourceVideo.pause();
+  }
+}
+
+function toggleMute() {
+  sourceVideo.muted = !sourceVideo.muted;
+  btnMute.innerText = sourceVideo.muted ? '🔇' : '🔊';
+}
+
+function toggleViewportFullscreen() {
+  const vp = document.getElementById('player-viewport');
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    if (vp.requestFullscreen) vp.requestFullscreen();
+    else if (vp.webkitRequestFullscreen) vp.webkitRequestFullscreen();
+    else if (vp.msRequestFullscreen) vp.msRequestFullscreen();
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }
+}
 
 function loadPreset(url) {
   videoInput.value = url;
@@ -75,10 +156,11 @@ function loadVideoToSource(streamUrl, rawUrl) {
 function startPlaybackAndGL() {
   sourceVideo.play().then(() => {
     initGlEngine();
-    showToast('✨ 3D 视差视频流就绪，原生进度条已可拖拽！');
+    showToast('✨ 3D 视差视频流就绪，全屏呈现 3D SBS 影院！');
   }).catch((err) => {
     console.log('Muted fallback play:', err);
     sourceVideo.muted = true;
+    btnMute.innerText = '🔇';
     sourceVideo.play();
     initGlEngine();
   });
