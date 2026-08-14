@@ -39,41 +39,24 @@
       <!-- WebGL 2D转3D 视差深度处理器 (主画面渲染) -->
       <canvas id="gl-canvas" width="1920" height="1080" data-stereo-mode="sbs" data-projection="3d_sbs"></canvas>
 
-      <!-- 实时捕获输出的 3D 立体 HTML5 视频元素 (支持 Quest 浏览器原生 3D SBS 全屏) -->
-      <video id="converted-3d-video" playsinline crossorigin="anonymous" data-stereo-mode="sbs" data-projection="3d_sbs"></video>
+      <!-- 实时捕获输出的 3D 立体 HTML5 视频元素 (支持 Quest 浏览器原生识别与全屏影院) -->
+      <video id="converted-3d-video" controls playsinline crossorigin="anonymous" data-stereo-mode="sbs" data-projection="3d_sbs"></video>
 
       <!-- 初始引导遮罩 -->
       <div id="start-guide-mask">
         <div class="play-pulse-circle" onclick="handleStartPlayback()">▶</div>
         <h2>输入视频链接并点击“播放”</h2>
-        <p>WebGL 实时将 2D 转换为 3D 左右立体流，支持任意点拖拽进度条与 Quest 原生 3D VR 全屏！</p>
+        <p>点击“播放”直接输出 3D 视差视频流，完全支持浏览器原生进度条与 3D VR 全屏！</p>
       </div>
 
-      <!-- 3D 沉浸影院可拖拽进度控制条 -->
-      <div id="cinema-controls" class="cinema-bar">
-        <button id="btn-cinema-play" class="control-icon-btn" onclick="togglePlayPause()">▶</button>
-        
-        <div class="time-display">
-          <span id="time-current">00:00</span> / <span id="time-duration">00:00</span>
-        </div>
-
-        <div class="seek-container">
-          <input type="range" id="seek-bar" min="0" max="100" value="0" step="0.1" oninput="onSeekInput(this.value)" onchange="onSeekChange(this.value)">
-          <div id="seek-progress-fill" class="seek-fill"></div>
-        </div>
-
-        <div class="volume-container">
-          <button id="btn-volume" class="control-icon-btn" onclick="toggleMute()">🔊</button>
-          <input type="range" id="volume-bar" min="0" max="1" value="1" step="0.05" oninput="onVolumeChange(this.value)">
-        </div>
-
+      <!-- 悬浮调节控制条 (仅保留 3D 视差调节) -->
+      <div id="floating-controls" class="floating-overlay">
         <div class="parallax-control">
-          <label for="parallax-range">3D 视差:</label>
+          <label for="parallax-range">3D 视差深度:</label>
           <input type="range" id="parallax-range" min="5" max="90" value="35" oninput="onParallaxSliderChange(this.value)">
           <span id="parallax-val">35</span>
         </div>
-
-        <button id="btn-fullscreen" class="control-icon-btn" onclick="toggleCinemaFullscreen()">📺 全屏</button>
+        <button class="action-btn boost" onclick="boost3DDepth()">✨ 视差增强</button>
       </div>
     </main>
 
