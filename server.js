@@ -96,8 +96,8 @@ app.get('/api/proxy', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`=======================================================`);
-  console.log(` Meta Quest 2D-to-3D Web Server Started Successfully!  `);
+  console.log(` 2D-to-3D Web Cinema Server Started Successfully!      `);
   console.log(` Access URL: http://localhost:${PORT}                  `);
-  console.log(` Open this URL in Meta Quest Browser for 3D VR Mode!    `);
+  console.log(` Open this URL in any 3D/VR Browser for 3D VR Mode!    `);
   console.log(`=======================================================`);
 });
