@@ -1,0 +1,330 @@
+:root {
+  --bg-primary: #0a0b10;
+  --bg-card: rgba(20, 22, 34, 0.85);
+  --bg-card-border: rgba(255, 255, 255, 0.12);
+  --accent-cyan: #00d2ff;
+  --accent-blue: #0066ff;
+  --accent-gradient: linear-gradient(135deg, #0066ff, #00d2ff);
+  --accent-boost: linear-gradient(135deg, #ff007f, #7928ca);
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --radius-xl: 24px;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+#app-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* 1. 顶部控制面板 */
+.app-header {
+  padding: 16px 24px;
+  background: rgba(10, 11, 16, 0.95);
+  border-bottom: 1px solid var(--bg-card-border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 100;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.logo-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  font-size: 28px;
+}
+
+.logo-area h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.logo-area h1 span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-cyan);
+  margin-left: 8px;
+  background: rgba(0, 210, 255, 0.1);
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 210, 255, 0.3);
+}
+
+.url-control-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.input-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+#video-input {
+  flex: 1;
+  padding: 12px 18px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--bg-card-border);
+  border-radius: var(--radius-lg);
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+#video-input:focus {
+  border-color: var(--accent-cyan);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 16px rgba(0, 210, 255, 0.25);
+}
+
+#btn-play {
+  padding: 12px 24px;
+  background: var(--accent-gradient);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0, 102, 255, 0.4);
+}
+
+#btn-play:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.15);
+}
+
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.chip-btn {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chip-btn:hover {
+  background: rgba(0, 210, 255, 0.15);
+  color: #fff;
+  border-color: var(--accent-cyan);
+}
+
+/* 2. 视频与 WebGL 视差主体 Viewport */
+#player-viewport {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  overflow: hidden;
+}
+
+#source-video {
+  display: none;
+}
+
+#gl-canvas {
+  display: none;
+  width: 1920px;
+  height: 1080px;
+}
+
+#converted-3d-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  z-index: 10;
+}
+
+.action-btn.webxr-btn {
+  background: linear-gradient(135deg, #7928ca, #00d2ff);
+  box-shadow: 0 0 12px rgba(121, 40, 202, 0.5);
+}
+
+.action-btn.webxr-btn:hover {
+  box-shadow: 0 0 20px rgba(0, 210, 255, 0.8);
+}
+
+/* 引导遮罩 */
+#start-guide-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 11, 16, 0.92);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+  gap: 16px;
+  text-align: center;
+  padding: 24px;
+}
+
+.play-pulse-circle {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 42px;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 0 32px rgba(0, 210, 255, 0.6);
+  animation: pulse 2s infinite;
+  transition: transform 0.2s ease;
+}
+
+.play-pulse-circle:hover {
+  transform: scale(1.1);
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(0, 210, 255, 0.7); }
+  70% { box-shadow: 0 0 0 24px rgba(0, 210, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 210, 255, 0); }
+}
+
+#start-guide-mask h2 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+#start-guide-mask p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  max-width: 480px;
+  line-height: 1.6;
+}
+
+/* 浮动控制条 */
+.floating-overlay {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  background: var(--bg-card);
+  padding: 8px 20px;
+  border-radius: 32px;
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--bg-card-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+  z-index: 40;
+}
+
+.action-btn {
+  padding: 8px 18px;
+  background: var(--accent-gradient);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn.boost {
+  background: var(--accent-boost);
+}
+
+.action-btn:hover {
+  transform: scale(1.06);
+}
+
+.parallax-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+input[type=range] {
+  accent-color: var(--accent-cyan);
+  width: 100px;
+}
+
+#parallax-val {
+  font-weight: 600;
+  color: var(--accent-cyan);
+  min-width: 24px;
+}
+
+/* Toast 提示 */
+.toast-card {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 210, 255, 0.95);
+  color: #000;
+  font-weight: 700;
+  padding: 10px 22px;
+  border-radius: 20px;
+  font-size: 14px;
+  box-shadow: 0 4px 20px rgba(0, 210, 255, 0.5);
+  z-index: 99;
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "quest-2d3d-web",
+  "version": "1.0.0",
+  "description": "Meta Quest WebXR 2D-to-3D Video Conversion & MediaStream Proxy Server",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "webxr",
+    "quest3d",
+    "2d-to-3d",
+    "sbs-stereo",
+    "mediastream",
+    "video-proxy"
+  ],
+  "author": "Antigravity Team",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}

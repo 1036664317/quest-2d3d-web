@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="vr-mode" content="3d-sbs">
+  <meta name="projection" content="sbs">
+  <meta name="stereo" content="sbs_left_right">
+  <title>Quest 3D 沉浸影院 - 2D转3D 视频流转换服务</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+  <div id="app-root">
+    <!-- 1. 顶部导览与链接输入控制面板 -->
+    <header class="app-header">
+      <div class="logo-area">
+        <span class="logo-icon">🥽</span>
+        <h1>Quest 3D 沉浸影院 <span>2D转3D 实时流服务</span></h1>
+      </div>
+      <div class="url-control-card">
+        <div class="input-row">
+          <input type="url" id="video-input" placeholder="输入任意视频播放链接 (.m3u8 / .mp4 / 直播流)..." autocomplete="off" />
+          <button id="btn-play" onclick="handleStartPlayback()">▶ 播放</button>
+        </div>
+        <div class="preset-row">
+          <span class="preset-label">预置 3D 试听:</span>
+          <button class="chip-btn" onclick="loadPreset('https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8')">🎬 Mux HLS 示例</button>
+          <button class="chip-btn" onclick="loadPreset('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4')">🐰 Big Buck Bunny MP4</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 2. 视频与 WebGL 视差处理画布容器 -->
+    <main id="player-viewport">
+      <!-- 原始 2D 视频输入源 (隐式播放) -->
+      <video id="source-video" playsinline crossorigin="anonymous"></video>
+
+      <!-- WebGL 2D转3D 视差深度处理器 (主画面渲染) -->
+      <canvas id="gl-canvas" width="1920" height="1080" data-stereo-mode="sbs" data-projection="3d_sbs"></canvas>
+
+      <!-- 实时捕获输出的 3D 立体 HTML5 视频元素 (支持 Quest 浏览器原生识别与全屏影院) -->
+      <video id="converted-3d-video" controls playsinline crossorigin="anonymous" data-stereo-mode="sbs" data-projection="3d_sbs"></video>
+
+      <!-- 初始引导遮罩 -->
+      <div id="start-guide-mask">
+        <div class="play-pulse-circle" onclick="handleStartPlayback()">▶</div>
+        <h2>输入视频链接并点击“播放”</h2>
+        <p>点击“播放”直接输出 3D 视差视频流，完全支持浏览器原生进度条与 3D VR 全屏！</p>
+      </div>
+
+      <!-- 悬浮调节控制条 (仅保留 3D 视差调节) -->
+      <div id="floating-controls" class="floating-overlay">
+        <div class="parallax-control">
+          <label for="parallax-range">3D 视差深度:</label>
+          <input type="range" id="parallax-range" min="5" max="90" value="35" oninput="onParallaxSliderChange(this.value)">
+          <span id="parallax-val">35</span>
+        </div>
+        <button class="action-btn boost" onclick="boost3DDepth()">✨ 视差增强</button>
+      </div>
+    </main>
+
+    <!-- Toast 提示框 -->
+    <div id="toast" class="toast-card">已载入视频流，正在生成 3D 视差...</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
