@@ -39,7 +39,7 @@ quest-2d3d-web/
 ### 1. 克隆与安装依赖
 
 ```bash
-git clone https://github.com/your-username/quest-2d3d-web.git
+git clone https://github.com/1036664317/quest-2d3d-web.git
 cd quest-2d3d-web
 npm install
 ```
