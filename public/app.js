@@ -6,16 +6,6 @@ const canvas = document.getElementById('gl-canvas');
 const guideMask = document.getElementById('start-guide-mask');
 const toast = document.getElementById('toast');
 
-// 控制条 DOM 元素
-const cinemaControls = document.getElementById('cinema-controls');
-const btnCinemaPlay = document.getElementById('btn-cinema-play');
-const timeCurrent = document.getElementById('time-current');
-const timeDuration = document.getElementById('time-duration');
-const seekBar = document.getElementById('seek-bar');
-const seekFill = document.getElementById('seek-progress-fill');
-const btnVolume = document.getElementById('btn-volume');
-const volumeBar = document.getElementById('volume-bar');
-
 let hlsPlayer = null;
 let gl = null;
 let program = null;
@@ -26,14 +16,10 @@ let parallaxIntensity = 0.035;
 let isStreamCaptured = false;
 let mediaStream = null;
 
-let isDraggingSeek = false;
-let idleTimer = null;
-
 // 页面初始化
 window.addEventListener('DOMContentLoaded', () => {
   videoInput.value = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
-  setupSourceVideoListeners();
-  setupIdleControlBar();
+  setupNativeControlsSync();
 });
 
 function loadPreset(url) {
@@ -41,90 +27,75 @@ function loadPreset(url) {
   handleStartPlayback();
 }
 
-// 格式化秒数为 MM:SS
-function formatTime(seconds) {
-  if (isNaN(seconds) || seconds < 0) return '00:00';
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
-}
+// 绑定原生 <video> 播放控件与 2D 源视频的真实属性代理 (总时长 duration / 当前进度 currentTime / Seek 可拖拽支持)
+function setupNativeControlsSync() {
+  try {
+    // 1. 代理 duration 属性：让浏览器原生控件获取真实视频时长，激活可拖动进度条
+    Object.defineProperty(convertedVideo, 'duration', {
+      get: () => (sourceVideo && sourceVideo.duration && !isNaN(sourceVideo.duration)) ? sourceVideo.duration : 0,
+      configurable: true
+    });
 
-// 绑定源视频的事件与时间同步
-function setupSourceVideoListeners() {
+    // 2. 代理 seekable 属性：向原生播放器声明该视频流全时段可拖动 Seeking
+    Object.defineProperty(convertedVideo, 'seekable', {
+      get: () => {
+        const d = (sourceVideo && sourceVideo.duration && !isNaN(sourceVideo.duration)) ? sourceVideo.duration : 0;
+        return {
+          length: d > 0 ? 1 : 0,
+          start: () => 0,
+          end: () => d
+        };
+      },
+      configurable: true
+    });
+
+    // 3. 代理 currentTime 属性读写：拖拽原生进度条时直接控制源视频寻帧
+    Object.defineProperty(convertedVideo, 'currentTime', {
+      get: () => (sourceVideo ? sourceVideo.currentTime || 0 : 0),
+      set: (val) => {
+        if (sourceVideo && typeof val === 'number' && !isNaN(val)) {
+          sourceVideo.currentTime = val;
+        }
+      },
+      configurable: true
+    });
+  } catch (e) {
+    console.warn('Native controls proxy warning:', e);
+  }
+
+  // 4. 源视频事件透传给 convertedVideo 原生控件
   sourceVideo.addEventListener('loadedmetadata', () => {
-    if (sourceVideo.duration && !isNaN(sourceVideo.duration)) {
-      timeDuration.innerText = formatTime(sourceVideo.duration);
-    }
+    convertedVideo.dispatchEvent(new Event('loadedmetadata'));
+    convertedVideo.dispatchEvent(new Event('durationchange'));
+  });
+
+  sourceVideo.addEventListener('durationchange', () => {
+    convertedVideo.dispatchEvent(new Event('durationchange'));
   });
 
   sourceVideo.addEventListener('timeupdate', () => {
-    if (!isDraggingSeek && sourceVideo.duration) {
-      const pct = (sourceVideo.currentTime / sourceVideo.duration) * 100;
-      seekBar.value = pct;
-      seekFill.style.width = pct + '%';
-      timeCurrent.innerText = formatTime(sourceVideo.currentTime);
-      if (timeDuration.innerText === '00:00' || timeDuration.innerText === 'NaN:NaN') {
-        timeDuration.innerText = formatTime(sourceVideo.duration);
-      }
-    }
+    convertedVideo.dispatchEvent(new Event('timeupdate'));
   });
 
-  sourceVideo.addEventListener('play', () => {
-    btnCinemaPlay.innerText = '❚❚';
+  sourceVideo.addEventListener('seeking', () => {
+    convertedVideo.dispatchEvent(new Event('seeking'));
   });
 
-  sourceVideo.addEventListener('pause', () => {
-    btnCinemaPlay.innerText = '▶';
+  sourceVideo.addEventListener('seeked', () => {
+    convertedVideo.dispatchEvent(new Event('seeked'));
   });
-}
 
-// 可拖拽 Seek 进度条交互逻辑
-function onSeekInput(val) {
-  isDraggingSeek = true;
-  seekFill.style.width = val + '%';
-  if (sourceVideo.duration) {
-    const targetTime = (val / 100) * sourceVideo.duration;
-    timeCurrent.innerText = formatTime(targetTime);
-    sourceVideo.currentTime = targetTime;
-  }
-}
+  convertedVideo.addEventListener('play', () => {
+    if (sourceVideo.paused) sourceVideo.play().catch(() => {});
+  });
 
-function onSeekChange(val) {
-  isDraggingSeek = false;
-  if (sourceVideo.duration) {
-    const targetTime = (val / 100) * sourceVideo.duration;
-    sourceVideo.currentTime = targetTime;
-  }
-}
+  convertedVideo.addEventListener('pause', () => {
+    if (!sourceVideo.paused) sourceVideo.pause();
+  });
 
-function togglePlayPause() {
-  if (sourceVideo.paused) {
-    sourceVideo.play();
-  } else {
-    sourceVideo.pause();
-  }
-}
-
-function toggleMute() {
-  sourceVideo.muted = !sourceVideo.muted;
-  if (sourceVideo.muted) {
-    btnVolume.innerText = '🔇';
-    volumeBar.value = 0;
-  } else {
-    btnVolume.innerText = '🔊';
-    volumeBar.value = sourceVideo.volume || 1;
-  }
-}
-
-function onVolumeChange(val) {
-  sourceVideo.volume = parseFloat(val);
-  if (parseFloat(val) === 0) {
-    sourceVideo.muted = true;
-    btnVolume.innerText = '🔇';
-  } else {
-    sourceVideo.muted = false;
-    btnVolume.innerText = '🔊';
-  }
+  sourceVideo.addEventListener('ended', () => {
+    convertedVideo.pause();
+  });
 }
 
 function handleStartPlayback() {
@@ -137,6 +108,7 @@ function handleStartPlayback() {
   guideMask.style.display = 'none';
   showToast('🚀 正在生成 3D 视差立体流...');
 
+  // 使用本地代理接口
   const proxiedUrl = `/api/proxy?url=${encodeURIComponent(rawUrl)}`;
   loadVideoToSource(proxiedUrl, rawUrl);
 }
@@ -177,16 +149,14 @@ function loadVideoToSource(streamUrl, rawUrl) {
 }
 
 function startPlaybackAndGL() {
+  // 手势回调内同步触发播放
   sourceVideo.play().then(() => {
     initGlEngine();
-    showToast('✨ 3D 视差视频流播放中，进度条可实时拖拽！');
   }).catch((err) => {
     console.log('Muted fallback play:', err);
     sourceVideo.muted = true;
-    sourceVideo.play().then(() => {
-      initGlEngine();
-      showToast('✨ 3D 视差播放中 (默认已静音)');
-    });
+    sourceVideo.play();
+    initGlEngine();
   });
 }
 
@@ -319,18 +289,24 @@ function render3DSBSCanvas() {
   }
 }
 
-// 捕获 WebGL 3D 画布流，推送至 <video id="converted-3d-video">
+// 捕获 WebGL 3D 画布流，直接推送到具有浏览器原生控件的 <video id="converted-3d-video">
 function setupMediaStreamToVideo() {
   try {
     mediaStream = canvas.captureStream ? canvas.captureStream(60) : (canvas.mozCaptureStream ? canvas.mozCaptureStream(60) : null);
     if (mediaStream) {
+      // 提取源视频音轨合并入 3D 视频流
       const audioTracks = sourceVideo.captureStream ? sourceVideo.captureStream().getAudioTracks() : (sourceVideo.mozCaptureStream ? sourceVideo.mozCaptureStream().getAudioTracks() : []);
       if (audioTracks.length > 0) {
         mediaStream.addTrack(audioTracks[0]);
       }
       convertedVideo.srcObject = mediaStream;
-      convertedVideo.play().catch(() => {});
-      isStreamCaptured = true;
+      convertedVideo.play().then(() => {
+        isStreamCaptured = true;
+        showToast('✨ 3D 视差视频流已挂载，原生进度条已可拖拽！');
+      }).catch((e) => {
+        console.log('convertedVideo play catch:', e);
+        isStreamCaptured = true;
+      });
     }
   } catch (e) {
     console.error('Canvas captureStream error:', e);
@@ -342,34 +318,11 @@ function onParallaxSliderChange(val) {
   document.getElementById('parallax-val').innerText = val;
 }
 
-function toggleCinemaFullscreen() {
-  const container = document.getElementById('player-viewport') || convertedVideo;
-  if (container.requestFullscreen) container.requestFullscreen();
-  else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
-  else if (container.msRequestFullscreen) container.msRequestFullscreen();
-}
-
-// 播放时鼠标静止 3.5 秒自动隐藏控制条
-function setupIdleControlBar() {
-  const playerViewport = document.getElementById('player-viewport');
-
-  function showControls() {
-    cinemaControls.classList.remove('idle-hidden');
-    clearTimeout(idleTimer);
-    if (!sourceVideo.paused) {
-      idleTimer = setTimeout(() => {
-        cinemaControls.classList.add('idle-hidden');
-      }, 3500);
-    }
-  }
-
-  playerViewport.addEventListener('mousemove', showControls);
-  playerViewport.addEventListener('touchstart', showControls);
-  cinemaControls.addEventListener('mousemove', (e) => {
-    e.stopPropagation();
-    cinemaControls.classList.remove('idle-hidden');
-    clearTimeout(idleTimer);
-  });
+function boost3DDepth() {
+  parallaxIntensity = 0.065;
+  document.getElementById('parallax-range').value = 65;
+  document.getElementById('parallax-val').innerText = '65';
+  showToast('✨ 3D 视差强度已增强到极致');
 }
 
 function showToast(msg) {
