@@ -180,31 +180,37 @@ function initGlEngine() {
 
 function render3DSBSCanvas() {
   if (convertedVideo.readyState >= convertedVideo.HAVE_CURRENT_DATA) {
+    if (convertedVideo.videoWidth && convertedVideo.videoHeight) {
+      if (canvas.width !== convertedVideo.videoWidth) {
+        canvas.width = convertedVideo.videoWidth;
+        canvas.height = convertedVideo.videoHeight;
+      }
+    }
+
     try {
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, convertedVideo);
     } catch (e) {}
 
-    const vWidth = convertedVideo.videoWidth || 1920;
-    const vHeight = convertedVideo.videoHeight || 1080;
+    const w = canvas.width;
+    const h = canvas.height;
+    const halfW = w / 2;
 
-    if (canvas.width !== vWidth || canvas.height !== vHeight) {
-      canvas.width = vWidth;
-      canvas.height = vHeight;
-    }
-
-    const halfW = Math.floor(vWidth / 2);
+    // 清屏全画面为纯黑不透明
+    gl.viewport(0, 0, w, h);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
     gl.useProgram(program);
 
-    // 左眼视口 (Left Eye)
-    gl.viewport(0, 0, halfW, vHeight);
+    // 左眼视口 (Left Eye - 50% width)
+    gl.viewport(0, 0, halfW, h);
     gl.uniform1f(uEyeOffsetLoc, -1.0);
     gl.uniform1f(uParallaxIntensityLoc, parallaxIntensity);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-    // 右眼视口 (Right Eye)
-    gl.viewport(halfW, 0, halfW, vHeight);
+    // 右眼视口 (Right Eye - 50% width)
+    gl.viewport(halfW, 0, halfW, h);
     gl.uniform1f(uEyeOffsetLoc, 1.0);
     gl.uniform1f(uParallaxIntensityLoc, parallaxIntensity);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
